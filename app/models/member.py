@@ -77,7 +77,7 @@ class Schedule(Base):
         nullable=False
     )
 
-    date = Column(Date, nullable=False)
+    date_schedule = Column(Date, nullable=False)
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
     zone = Column(String)
