@@ -1,2 +1,1 @@
-from .member import User , Offers , Membership , Payment , Activities , Offer_activities
-from .trainer import Trainer , Trainer_activity , Sessions , Room 
+from app.models.member import User , Member , Trainer , Fitness , Membership , Role , Schedule

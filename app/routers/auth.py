@@ -16,12 +16,12 @@ router = APIRouter(prefix="/auth",tags=["auth"])
 @router.post("/register")
 async def create_user(current_user : UserCreate,response : Response,db : Annotated[Session ,Depends(get_db)]) :
     current_user = current_user.model_dump()
-    verify_user = db.query(User).filter(User.email == current_user["email"]).first()
+    verify_user = db.query(User).filter(User.phone_number == current_user["phone_number"]).first()
     
     if verify_user :
-        raise HTTPException(403,"the email is already exist !")
+        raise HTTPException(403,"the user is already exist !")
     hashed_password = get_password_hash(current_user["password"])
-    new_user = User(full_name = current_user["full_name"],email = current_user["email"] , password = hashed_password )
+    new_user = User(full_name = current_user["full_name"],phone_number = current_user["phone_number"],email = current_user["email"] , notes = current_user["notes"] , role_id = 1)
     db.add(new_user)
     db.commit()
     response.status_code = status.HTTP_201_CREATED
