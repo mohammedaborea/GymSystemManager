@@ -15,7 +15,7 @@ router = APIRouter(prefix="/schedule",tags=["schedules"])
 def add_schedule(response : Response,db : Annotated[Session , Depends(get_db)],schedule : ScheduleCreate) :
     trainer_verify = db.query(Trainer).filter(Trainer.user.has(User.full_name.contains(schedule.trainer))).first()
     if trainer_verify : 
-        new_schedule = Schedule(trainer_id = trainer_verify.user_id , date = schedule.date_schedule , zone = schedule.zone , 
+        new_schedule = Schedule(trainer_id = trainer_verify.user_id , date_schedule = schedule.date_schedule , zone = schedule.zone , 
                                 start_time = schedule.start_time , end_time = schedule.end_time , notes = schedule.notes)
         db.add(new_schedule)
         db.commit()
