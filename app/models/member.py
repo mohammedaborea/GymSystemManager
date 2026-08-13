@@ -64,21 +64,25 @@ class Trainer(Base):
         back_populates="trainer",
         cascade="all, delete-orphan"
     )
+    mark_att = relationship("MarkAttendance" , back_populates="trainer")
     
 
 
 class MarkAttendance(Base) :
     __tablename__ = "mark_attendance"
-    trainer_id = Column(Integer , ForeignKey("trainer.id",ondelete="CASCADE",onupdate="CASCADE"),primary_key=True)
+    trainer_id = Column(Integer , ForeignKey("trainer.user_id",ondelete="CASCADE",onupdate="CASCADE"),primary_key=True)
     attendance_id = Column(Integer , ForeignKey("attendance.id",ondelete="CASCADE",onupdate="CASCADE"))
-    date_att = Column(Date,default=date.today)
+    date_att = Column(Date,default=date.today,primary_key=True)
     check_in = Column(Time)
     check_out = Column(Time)
     notes = Column(Text)
+    trainer = relationship("Trainer" , back_populates="mark_att")
+    attendance = relationship("Attendance", back_populates="mark_att")
 class Attendance(Base) :
     __tablename__ = "attendance"
     id = Column(Integer ,primary_key=True)
     status = Column(String,nullable=False)
+    mark_att = relationship("MarkAttendance",back_populates="attendance")
 
 class Schedule(Base):
     __tablename__ = "schedule"
