@@ -3,7 +3,7 @@ from app.models import User,Trainer,Schedule
 from fastapi import APIRouter,Depends,HTTPException,Response,status,Query
 from sqlalchemy import select,extract
 from sqlalchemy.orm import Session
-from app.schema import UserResp,UserCreate,TrainerResp,TrainerModify,TrainerCreate,ScheduleUpdate,UserStatus,ScheduleCreate,MonthVerify,WeeklyScheduleSearch
+from app.schemas.schedule import ScheduleUpdate,ScheduleCreate,WeeklyScheduleSearch
 from typing import List,Annotated
 from collections import defaultdict
 from datetime import date,timedelta

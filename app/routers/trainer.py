@@ -3,23 +3,29 @@ from app.models import User,Trainer
 from fastapi import APIRouter,Depends,HTTPException,Response,status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.schema import UserResp,UserCreate,TrainerResp,TrainerModify,TrainerCreate,UserStatus
+from app.schemas.common import StandardResponse,ErrorResponse
+from app.schemas.trainer import TrainerCreate , TrainerModify , TrainerResp
+from app.schemas.user import UserStatus
 from typing import List,Annotated
-from app.oauth2 import get_password_hash,get_current_user,trainer_required
+
 
 router = APIRouter(prefix="/trainer",tags=["trainers"])
-@router.get("/",response_model=List[TrainerResp])
-def get_trainers(db : Annotated[Session,Depends(get_db)]) :
-    trainers = db.query(Trainer).all()
-    return trainers
+@router.get("/",response_model=StandardResponse[list[TrainerResp]])
+def get_trainers(db : Annotated[Session,Depends(get_db)] , limit : int = 10 , skip : int = 0) :
+    trainers = db.query(Trainer).limit(limit).offset(skip).all()
+    return StandardResponse(success = True ,
+                            data = trainers ,
+                            message = "Trainer s profile",
+                            Error = None)
 
 
-@router.get("/search", response_model=TrainerResp)
+@router.get("/search", response_model=StandardResponse[TrainerResp])
 def get_trainer(
     db: Annotated[Session, Depends(get_db)],
+    response : Response ,
     phone_num: int | None = None,
     full_name: str | None = None,
-    status : UserStatus | None = None
+    status_user : UserStatus | None = None
 ):
     if phone_num is not None:
         trainer = (
@@ -37,33 +43,53 @@ def get_trainer(
             )
             .first()
         )
-    elif status is not None :
+    elif status_user is not None :
         trainer = (
                     db.query(Trainer)
                     .filter(
-                        Trainer.user.has(User.status == status )
+                        Trainer.user.has(User.status == status_user )
                     )
                     .first()
                 )
     else:
-        raise HTTPException(
-            status_code=400,
-            detail="Provide phone_num or full_name"
-        )
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return StandardResponse(success=False , 
+                                data = None , 
+                                message="Trainer searching is failed",
+                                error = ErrorResponse(
+                                    code = "MISSING_ARGUMENTS",
+                                    message = "Provide phone_num or full_name or status",
+                                    field = "phone_num or full_name or status"
+                                ))
 
     if not trainer:
-        raise HTTPException(
-            status_code=404,
-            detail="Trainer not found"
-        )
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return StandardResponse(success=False , 
+                                data = None , 
+                                message="Trainer searching is failed",
+                                error = ErrorResponse(
+                                    code = "Non existing Trainer",
+                                    message = "Trainer does not exist"
+                                    
+                                ))
 
-    return trainer
+    return StandardResponse(success=True ,
+                            data = trainer ,
+                            message = "trainer exists",
+                            )
 
-@router.post("/")
+@router.post("/" , response_model=StandardResponse[TrainerResp])
 def add_trainer(db : Annotated[Session,Depends(get_db)] ,response : Response, trainer : TrainerCreate) : 
     trainer_verify = db.query(User).filter(User.email == trainer.email).first()
     if trainer_verify:
-        raise HTTPException(404,"Email linked with another account")
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return StandardResponse(success=False , 
+                                data = None , 
+                                message="Trainer Creation is failed",
+                                error = ErrorResponse(
+                                    code = "existing Trainer",
+                                    message = "Trainer already exists"
+                                            ))
     
     new_user = User(full_name = trainer.full_name , email = trainer.email , 
                     phone_number = trainer.phone_number
@@ -74,11 +100,17 @@ def add_trainer(db : Annotated[Session,Depends(get_db)] ,response : Response, tr
     db.add(new_trainer)
     db.commit()
     response.status_code = status.HTTP_201_CREATED
-    return {"message" : "Account created successfully"}
+    return StandardResponse(success=True , 
+                            data = new_trainer , 
+                            message="Trainer created successfully"
+                                    )
     
     
-@router.patch("/{id}",response_model=TrainerResp)
-def modify_trainer(id : int ,data : TrainerModify, db : Annotated[Session,Depends(get_db)]) :
+@router.patch("/{id}",response_model=StandardResponse[TrainerResp])
+def modify_trainer(id : int ,
+                   response : Response,
+                   data : TrainerModify,
+                   db : Annotated[Session,Depends(get_db)]) :
     current_user = db.query(User).filter(User.id == id).first()
     current_trainer = db.query(Trainer).filter(Trainer.user_id == id).first()
     if current_user and current_trainer :
@@ -93,20 +125,44 @@ def modify_trainer(id : int ,data : TrainerModify, db : Annotated[Session,Depend
 
         db.commit()
         db.refresh(current_trainer)
-        return current_trainer
-    raise HTTPException(404,"user does not exist")
+        response.status_code = status.HTTP_202_ACCEPTED
+        return StandardResponse(success=False , 
+                                data = current_trainer , 
+                                message="Trainer Modified successfully"
+                                        )
+    response.status_code = status.HTTP_404_NOT_FOUND
+    return StandardResponse(success=False , 
+                            data = None , 
+                            message="Trainer Modifying is failed",
+                            error = ErrorResponse(
+                                code = "NON_EXISTING_TRAINER",
+                                message = "Trainer does not exist"
+                                                ))
 
-@router.delete("/{id}")
-def delete_trainer(id : int , db : Annotated[Session , Depends(get_db)]) :
+@router.delete("/{id}" , response_model=StandardResponse[TrainerResp])
+def delete_trainer(id : int ,
+                   response : Response ,
+                   db : Annotated[Session , Depends(get_db)]) :
     trainer_verify = db.query(Trainer).filter(Trainer.user_id==id)
     user_verify = db.query(User).filter(User.id == id)
     if trainer_verify.first() and user_verify.first() : 
         trainer_verify = trainer_verify.delete()
         user_verify = user_verify.delete()
         db.commit()
-        return {"message" : "Account deleted successfully"}
+        response.status_code = status.HTTP_200_OK
+        return StandardResponse(success=True , 
+                                data = None , 
+                                message="Trainer Deleting Successfully"
+                                        )
 
-    raise HTTPException(404,"the user does not exist")
+    response.status_code = status.HTTP_404_NOT_FOUND
+    return StandardResponse(success=False , 
+                            data = None , 
+                            message="Trainer Deleting is failed",
+                            error = ErrorResponse(
+                            code = "NON_EXISTING_TRAINER",
+                            message = "Trainer does not exist"
+                                                ))
     
 
 

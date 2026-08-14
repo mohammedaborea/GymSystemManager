@@ -3,7 +3,7 @@ from app.models import User,Member
 from fastapi import APIRouter,Depends,HTTPException,Response,status,Query
 
 from sqlalchemy.orm import Session
-from app.schema import MemberResp,MemberCreate,UserStatus,MemberModify
+from app.schemas.member import MemberResp,MemberCreate,UserStatus,MemberModify
 from typing import List,Annotated
 from collections import defaultdict
 from datetime import date,timedelta

@@ -3,7 +3,7 @@ from app.models import User,Member,Membership
 from fastapi import APIRouter,Depends,HTTPException,Response,status,Query
 
 from sqlalchemy.orm import Session,selectinload
-from app.schema import MembershipCreate,MembershipModify
+from app.schemas.membership import MembershipCreate,MembershipModify
 from typing import List,Annotated
 from collections import defaultdict
 from datetime import date,timedelta

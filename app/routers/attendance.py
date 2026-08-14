@@ -3,7 +3,7 @@ from app.models import User,Trainer,Attendance,MarkAttendance
 from fastapi import APIRouter,Depends,HTTPException,Response,status,Query
 
 from sqlalchemy.orm import Session,selectinload
-from app.schema import TrainerCreate,TrainerModify,TrainerResp,AttendanceCreate,AttendanceResp,AttendanceModify
+from app.schemas.attendance import AttendanceCreate,AttendanceResp,AttendanceModify
 from typing import List,Annotated
 from collections import defaultdict
 from datetime import date,timedelta
