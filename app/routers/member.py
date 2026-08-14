@@ -11,8 +11,8 @@ from datetime import date,timedelta
 router = APIRouter(prefix="/member" , tags=["members"])
 
 @router.get("/",response_model=List[MemberResp])
-def get_members(db : Annotated[Session , Depends(get_db)]) :
-    members = db.query(Member).all()
+def get_members(db : Annotated[Session , Depends(get_db)] , limit : int = 10 , skip : int = 0) :
+    members = db.query(Member).limit(limit).offset(skip).all()
     return members
 
 @router.post("/")

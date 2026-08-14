@@ -155,5 +155,8 @@ class AttendanceModify(BaseModel) :
     notes : str | None = None
     
     
-
+class MembershipCreate(BaseModel) :
+    name : str
     
+class MembershipModify(BaseModel) : 
+    name : str | None = None

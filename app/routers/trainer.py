@@ -78,26 +78,19 @@ def add_trainer(db : Annotated[Session,Depends(get_db)] ,response : Response, tr
     
     
 @router.patch("/{id}",response_model=TrainerResp)
-def modify_trainer(id : int ,trainer_data : TrainerModify, db : Annotated[Session,Depends(get_db)]) :
+def modify_trainer(id : int ,data : TrainerModify, db : Annotated[Session,Depends(get_db)]) :
     current_user = db.query(User).filter(User.id == id).first()
     current_trainer = db.query(Trainer).filter(Trainer.user_id == id).first()
     if current_user and current_trainer :
-        if trainer_data.full_name is not None :
-            current_user.full_name = trainer_data.full_name
-        if trainer_data.email is not None :
-            current_user.email = trainer_data.email 
-        if trainer_data.notes is not None : 
-            current_user.notes = trainer_data.notes 
-        if trainer_data.phone_number is not None :
-            current_user.phone_number = trainer_data.phone_number
-        if trainer_data.hire_date is not None :
-            current_trainer.hire_date = trainer_data.hire_date
-        if trainer_data.monthly_salary is not None :
-            current_trainer.monthly_salary = trainer_data.monthly_salary
-        if trainer_data.status is not None :
-            current_user.status = trainer_data.status
-        
-        
+        user_fields = {"full_name","email","notes","phone_number","status"}
+        trainer_fields = {"hire_date" , "monthly_salary"}
+        trainer_data = data.model_dump(exclude_unset=True)
+        for field,value in trainer_data.items() :
+            if field in user_fields : 
+                setattr(current_user , field,value)
+            else :
+                setattr(current_trainer , field , value)
+
         db.commit()
         db.refresh(current_trainer)
         return current_trainer

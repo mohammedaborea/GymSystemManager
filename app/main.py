@@ -1,5 +1,5 @@
 from fastapi import FastAPI 
-from app.routers import auth,trainer,schedule,member,attendance
+from app.routers import auth,trainer,schedule,member,attendance , membership
 
 app = FastAPI()
 
@@ -13,3 +13,4 @@ app.include_router(trainer.router)
 app.include_router(schedule.router)
 app.include_router(member.router)
 app.include_router(attendance.router)
+app.include_router(membership.router)
