@@ -1,1 +1,1 @@
-from app.models.member import User , Member , Trainer , Fitness , Membership , Role , Schedule ,Attendance,MarkAttendance
+from app.models.member import User , Member , Trainer ,Admin ,Fitness , Membership , Schedule ,Attendance,MarkAttendance

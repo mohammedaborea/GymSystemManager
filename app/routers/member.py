@@ -8,8 +8,9 @@ from app.schemas.common import StandardResponse,ErrorResponse
 from typing import List,Annotated
 from collections import defaultdict
 from datetime import date,timedelta
+from app.oauth2 import get_current_user
 
-router = APIRouter(prefix="/member" , tags=["members"])
+router = APIRouter(prefix="/member" , tags=["members"],dependencies=[Depends(get_current_user)] )
 
 @router.get("/",response_model=StandardResponse[List[MemberResp]])
 def get_members(db : Annotated[Session , Depends(get_db)] , limit : int = 10 , skip : int = 0) :
@@ -36,7 +37,7 @@ def add_member(db : Annotated[Session , Depends(get_db)],response : Response , m
                                         )
         
     new_user = User(email = member.email , phone_number = member.phone_number,full_name = member.full_name,status = member.status,
-                    notes = member.notes , role_id = 1)
+                    notes = member.notes)
     db.add(new_user)
     db.commit()
     new_member = Member(member_id = new_user.id,joined_at = member.joined_at,expiry_date = member.expiry_date ,fitness_goal_id = member.fitness_goal_id,
@@ -54,7 +55,7 @@ def add_member(db : Annotated[Session , Depends(get_db)],response : Response , m
 
 @router.delete("/{id}" , response_model=StandardResponse[MemberResp])
 def delete_trainer(id : int,response : Response , db : Annotated[Session , Depends(get_db)]) :
-    member_verify = db.query(Member).filter(Member.member_id==id)
+    member_verify = db.query(Member).filter(Member.id==id)
     user_verify = db.query(User).filter(User.id == id)
     if member_verify.first() and user_verify.first() : 
         member_verify = member_verify.delete()
@@ -147,7 +148,7 @@ def get_member(
 @router.patch("/{id}",response_model=StandardResponse[MemberResp])
 def modify_member(id : int ,response : Response,data : MemberModify , db : Annotated[Session , Depends(get_db)]) :
     
-    member_verify = db.query(Member).filter(Member.member_id == id).first()
+    member_verify = db.query(Member).filter(Member.id == id).first()
     if member_verify :
         user_fields = {"full_name" , "email" , "phone_number" , "status" , "notes"}
         member_fields = {"joined_at" , "expiry_date" , "fitness_goal_id" , "membership_id"}

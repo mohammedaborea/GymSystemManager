@@ -4,13 +4,18 @@ from datetime import date,timedelta
 from sqlalchemy.orm import relationship
 
 
+class Admin(Base):
+    __tablename__ = "admins"
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String, unique=True, nullable=False)
+    password = Column(String, nullable=False)
 class User(Base) : 
     __tablename__= "users"
     id = Column(Integer , primary_key=True , index=True)
     full_name=Column(String,nullable=False)
     phone_number = Column(Integer , nullable=False)
-    email = Column(String,nullable=False)
-    
+    email = Column(String,unique=True,nullable=False)
     status = Column(
         Enum("active", "inactive","expired", name="user_status"),
         nullable=False,
@@ -19,13 +24,7 @@ class User(Base) :
     notes = Column(Text)
     
     
-    role_id = Column(Integer,ForeignKey("roles.id",ondelete="CASCADE",onupdate="CASCADE"))
-    role = relationship("Role")
-    
-class Role(Base) : 
-    __tablename__ = "roles"
-    id = Column(Integer , primary_key=True)
-    pseudo = Column(String , nullable=False)
+
     
 
     
@@ -35,7 +34,8 @@ class Role(Base) :
 class Member(Base) :
 
     __tablename__ = "member"
-    member_id = Column(Integer , ForeignKey("users.id") , primary_key=True)
+    id = Column(Integer,primary_key=True)
+    member_id = Column(Integer , ForeignKey("users.id",ondelete="CASCADE",onupdate="CASCADE") , unique=True)
     joined_at = Column(Date)
     expiry_date = Column(Date)
     user = relationship("User")
@@ -48,10 +48,12 @@ class Member(Base) :
 class Trainer(Base):
     __tablename__ = "trainer"
 
+    id = Column(Integer,primary_key=True)
+
     user_id = Column(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
-        primary_key=True
+        unique=True
     )
 
     monthly_salary = Column(Integer)
@@ -70,7 +72,7 @@ class Trainer(Base):
 
 class MarkAttendance(Base) :
     __tablename__ = "mark_attendance"
-    trainer_id = Column(Integer , ForeignKey("trainer.user_id",ondelete="CASCADE",onupdate="CASCADE"),primary_key=True)
+    trainer_id = Column(Integer , ForeignKey("trainer.id",ondelete="CASCADE",onupdate="CASCADE"),primary_key=True)
     attendance_id = Column(Integer , ForeignKey("attendance.id",ondelete="CASCADE",onupdate="CASCADE"))
     date_att = Column(Date,default=date.today,primary_key=True)
     check_in = Column(Time)
@@ -91,7 +93,7 @@ class Schedule(Base):
 
     trainer_id = Column(
         Integer,
-        ForeignKey("trainer.user_id", ondelete="CASCADE"),
+        ForeignKey("trainer.id", ondelete="CASCADE"),
         nullable=False
     )
 

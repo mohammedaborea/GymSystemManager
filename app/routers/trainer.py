@@ -94,7 +94,7 @@ def add_trainer(db : Annotated[Session,Depends(get_db)] ,response : Response, tr
     
     new_user = User(full_name = trainer.full_name , email = trainer.email , 
                     phone_number = trainer.phone_number
-                    ,role_id = 3,notes = trainer.notes)
+                    ,notes = trainer.notes)
     db.add(new_user)   
     db.commit()
     new_trainer = Trainer(user_id = new_user.id , hire_date = trainer.hire_date)
@@ -113,7 +113,7 @@ def modify_trainer(id : int ,
                    data : TrainerModify,
                    db : Annotated[Session,Depends(get_db)]) :
     current_user = db.query(User).filter(User.id == id).first()
-    current_trainer = db.query(Trainer).filter(Trainer.user_id == id).first()
+    current_trainer = db.query(Trainer).filter(Trainer.id == id).first()
     if current_user and current_trainer :
         user_fields = {"full_name","email","notes","phone_number","status"}
         trainer_fields = {"hire_date" , "monthly_salary"}
@@ -144,7 +144,7 @@ def modify_trainer(id : int ,
 def delete_trainer(id : int ,
                    response : Response ,
                    db : Annotated[Session , Depends(get_db)]) :
-    trainer_verify = db.query(Trainer).filter(Trainer.user_id==id)
+    trainer_verify = db.query(Trainer).filter(Trainer.id==id)
     user_verify = db.query(User).filter(User.id == id)
     if trainer_verify.first() and user_verify.first() : 
         trainer_verify = trainer_verify.delete()
@@ -168,7 +168,7 @@ def delete_trainer(id : int ,
 
 @router.get("/schedule/{id}",response_model=StandardResponse[dict[int,List[ScheduleResponse]]])
 def Trainer_schedule(id : int , response : Response , db : Annotated[Session,Depends(get_db)]) :
-    trainer_verify = db.query(Trainer).filter(Trainer.user_id == id).first()
+    trainer_verify = db.query(Trainer).filter(Trainer.id == id).first()
     if trainer_verify :
         schedules = db.query(Schedule).filter(Schedule.trainer_id == id).all()
         grouped = DefaultDict(list)

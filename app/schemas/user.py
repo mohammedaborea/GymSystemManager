@@ -9,15 +9,13 @@ class UserStatus(str, Enum):
 class UserBase(BaseModel) : 
     full_name :str
     email : EmailStr
+    
     phone_number : int
     status : UserStatus = UserStatus.ACTIVE
-    notes : str
+    notes : str | None = None
 
 class UserResp(UserBase) : 
     birdthday : date | None = None 
 
 class UserCreate(UserResp) :
-    joined_at : date
-    expiry_date : date
-    fitness_goal : str | None = None
-    membership : str 
+    password : str
