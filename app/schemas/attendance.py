@@ -20,6 +20,7 @@ class AttendanceCreate(BaseModel) :
         return self
 
 class AttendanceResp(BaseModel) :
+    
     full_name : str 
     status : str             
     check_in : time 

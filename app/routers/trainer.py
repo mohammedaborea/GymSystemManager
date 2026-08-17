@@ -1,12 +1,13 @@
 from app.database import get_db
-from app.models import User,Trainer
+from app.models import User,Trainer,Schedule
 from fastapi import APIRouter,Depends,HTTPException,Response,status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.schemas.common import StandardResponse,ErrorResponse
 from app.schemas.trainer import TrainerCreate , TrainerModify , TrainerResp
+from app.schemas.schedule import ScheduleResponse
 from app.schemas.user import UserStatus
-from typing import List,Annotated
+from typing import List,Annotated,DefaultDict
 
 
 router = APIRouter(prefix="/trainer",tags=["trainers"])
@@ -163,6 +164,32 @@ def delete_trainer(id : int ,
                             code = "NON_EXISTING_TRAINER",
                             message = "Trainer does not exist"
                                                 ))
-    
+
+
+@router.get("/schedule/{id}",response_model=StandardResponse[dict[int,List[ScheduleResponse]]])
+def Trainer_schedule(id : int , response : Response , db : Annotated[Session,Depends(get_db)]) :
+    trainer_verify = db.query(Trainer).filter(Trainer.user_id == id).first()
+    if trainer_verify :
+        schedules = db.query(Schedule).filter(Schedule.trainer_id == id).all()
+        grouped = DefaultDict(list)
+        for schedule in schedules :
+            grouped[schedule.date_schedule.day].append(schedule)
+
+        return StandardResponse(
+            success=True,
+            data=grouped,
+            message="Schedules of this trainer Obtained Successfully"
+        )
+    response.status_code = status.HTTP_404_NOT_FOUND
+    return StandardResponse(
+        success=False,
+        data=None,
+        message = "Schedules Gaining is failed",
+        error = ErrorResponse(
+            code = "NON_EXISTING_TRAINER",
+            message="Trainer does not exist",
+
+        )
+    )
 
 

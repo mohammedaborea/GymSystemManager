@@ -12,7 +12,7 @@ class ScheduleUpdate(BaseModel) :
     model_config = ConfigDict(from_attributes=True)
 
 class ScheduleCreate(BaseModel):
-    trainer: str
+    trainer_id: int
     date_schedule: date = Field(default_factory=date.today)
     start_time: time
     end_time: time
@@ -25,6 +25,16 @@ class ScheduleCreate(BaseModel):
             raise ValueError("end_time must be after start_time")
 
         return self
+
+class ScheduleResponse(BaseModel) :
+    
+    date_schedule: date
+    start_time : time
+    end_time : time
+    zone: str | None = None
+    notes: str | None = None
+    model_config = ConfigDict(from_attributes=True)
+    
 
 class WeeklyScheduleSearch(BaseModel):
     date_week: date = Field(default_factory=date.today)

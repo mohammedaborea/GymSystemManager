@@ -4,14 +4,15 @@ from fastapi import APIRouter,Depends,HTTPException,Response,status,Query
 
 from sqlalchemy.orm import Session,selectinload
 from app.schemas.attendance import AttendanceCreate,AttendanceResp,AttendanceModify
+from app.schemas.common import StandardResponse,ErrorResponse
 from typing import List,Annotated
 from collections import defaultdict
 from datetime import date,timedelta
 
 router = APIRouter(prefix="/attendance" , tags=["attendances"])
 
-@router.post("/", response_model=AttendanceResp)
-def mark_attendance(attendance : AttendanceCreate ,db : Annotated[Session , Depends(get_db)]) :
+@router.post("/", response_model=StandardResponse[AttendanceResp])
+def mark_attendance(attendance : AttendanceCreate,response : Response ,db : Annotated[Session , Depends(get_db)]) :
     attendance_verify = db.query(MarkAttendance).filter(MarkAttendance.trainer_id == attendance.trainer_id, MarkAttendance.date_att == attendance.date_att).first()
     if not attendance_verify :
         new_att = MarkAttendance(trainer_id = attendance.trainer_id , attendance_id = attendance.attendance_id ,
@@ -20,19 +21,33 @@ def mark_attendance(attendance : AttendanceCreate ,db : Annotated[Session , Depe
         db.add(new_att)
         db.commit()
         db.refresh(new_att)
-        return {
+        response.status_code =status.HTTP_201_CREATED
+        return StandardResponse(
+            success = True ,
+            data = {
             "full_name" : new_att.trainer.user.full_name,
             "status" : new_att.attendance.status ,
             "date_att" : new_att.date_att,
             "check_in" : new_att.check_in,
             "check_out" : new_att.check_out
-            
-        }
-    raise HTTPException(404,"Attendance already exist")
+            },
+            message = "Attendance Created Successfully"
+        )
+
+    response.status_code =status.HTTP_400_BAD_REQUEST
+    return StandardResponse(
+        success=False,
+        data= None ,
+        message = "Attendance Creation is failed",
+        error= ErrorResponse(
+            code = "EXISTING ATTENDANCE",
+            message="Attendance already exists"
+        )
+    )
 
 
 
-@router.get("/", response_model=List[AttendanceResp])
+@router.get("/", response_model=StandardResponse[List[AttendanceResp]])
 def get_attendance(
     db: Annotated[Session, Depends(get_db)],
     date_att: Annotated[date, Query()] = date.today()
@@ -60,20 +75,37 @@ def get_attendance(
             "check_out": attendance.check_out
         })
 
-    return result
+    return StandardResponse(
+                success = True ,
+                data =result,
+                message = "Attendance Obtained Successfully"
+            )
 
-@router.delete("/{trainer_id}")
-def delete_attendance(trainer_id : int,db : Annotated[Session , Depends(get_db)],date_att : Annotated[date, Query()] = date.today()) :
+@router.delete("/{trainer_id}",response_model=StandardResponse[AttendanceResp])
+def delete_attendance(trainer_id : int,response : Response,db : Annotated[Session , Depends(get_db)],date_att : Annotated[date, Query()] = date.today()) :
     attendance_verify = db.query(MarkAttendance).filter(MarkAttendance.trainer_id == trainer_id, 
                                                         MarkAttendance.date_att == date_att)
     if attendance_verify.first() :
         attendance_verify = attendance_verify.delete(synchronize_session=False)
         db.commit()
-        return {"message" : "Attendance record is deleted successfully"}
-    raise HTTPException(404,"Attendance record not found")
+        return StandardResponse(
+                    success = True ,
+                    data =None,
+                    message = "Attendance Deleted Successfully"
+                )
+    response.status_code = status.HTTP_404_NOT_FOUND
+    return StandardResponse(
+            success=False,
+            data= None ,
+            message = "Attendance Deleting is failed",
+            error= ErrorResponse(
+                code = "NON EXISTING ATTENDANCE",
+                message="Attendance Does not exist"
+            )
+        )
 
-@router.patch("/{trainer_id}",response_model=AttendanceResp)
-def modify_attendance(trainer_id : int,db : Annotated[Session , Depends(get_db)],
+@router.patch("/{trainer_id}",response_model=StandardResponse[AttendanceResp])
+def modify_attendance(trainer_id : int,response : Response,db : Annotated[Session , Depends(get_db)],
                       data : AttendanceModify) :
     attendance_verify = db.query(MarkAttendance).filter(MarkAttendance.trainer_id == trainer_id, 
                                                             MarkAttendance.date_att == data.date_att).first()
@@ -84,29 +116,57 @@ def modify_attendance(trainer_id : int,db : Annotated[Session , Depends(get_db)]
         
         db.commit()
         db.refresh(attendance_verify)
-        return {
-            "full_name" : attendance_verify.trainer.user.full_name,
-            "status" : attendance_verify.attendance.status ,
-            "date_att" : attendance_verify.date_att,
-            "check_in" : attendance_verify.check_in,
-            "check_out" : attendance_verify.check_out
-            
-        }
+        response.status_code = status.HTTP_202_ACCEPTED
+        return StandardResponse(
+                    success = True ,
+                    data = {
+                    "full_name" : attendance_verify.trainer.user.full_name,
+                    "status" : attendance_verify.attendance.status ,
+                    "date_att" : attendance_verify.date_att,
+                    "check_in" : attendance_verify.check_in,
+                    "check_out" : attendance_verify.check_out
+                    },
+                    message = "Attendance Modified Successfully"
+                )
+    response.status_code = status.HTTP_404_NOT_FOUND
+    return StandardResponse(
+                success=False,
+                data= None ,
+                message = "Attendance Modifying is failed",
+                error= ErrorResponse(
+                    code = "NON EXISTING ATTENDANCE",
+                    message="Attendance Does not exist"
+                )
+            )
     
 
-@router.get("/trainer/{id}")
-def get_trainer_recs(id : int,db : Annotated[Session , Depends(get_db)],date_att : Annotated[date,Query()] = date.today()) :
+@router.get("/trainer/{id}" , response_model=StandardResponse[AttendanceResp])
+def get_trainer_recs(id : int,response : Response,db : Annotated[Session , Depends(get_db)],date_att : Annotated[date,Query()] = date.today()) :
     trainer_verify = db.query(Trainer).filter(Trainer.user_id == id).first()
     if trainer_verify :
         rec = db.query(MarkAttendance).filter(MarkAttendance.trainer_id == id , MarkAttendance.date_att == date_att).first()
         
-        return {"full_name" : rec.trainer.user.full_name,
-                "status" : rec.attendance.status ,
-                "date_att" : rec.date_att,
-                "check_in" : rec.check_in,
-                "check_out" : rec.check_out}
+        return StandardResponse(
+                            success = True ,
+                            data = {
+                            "full_name" : rec.trainer.user.full_name,
+                            "status" : rec.attendance.status ,
+                            "date_att" : rec.date_att,
+                            "check_in" : rec.check_in,
+                            "check_out" : rec.check_out
+                            },
+                            message = "Attendance Obtained Successfully"
+                        )
                     
-          
-    raise HTTPException(404,"Trainer not found")
+    response.status_code = status.HTTP_404_NOT_FOUND          
+    return StandardResponse(
+                    success=False,
+                    data= None ,
+                    message = "Trainer's recs is failed",
+                    error= ErrorResponse(
+                        code = "NON EXISTING Trainer",
+                        message="Trainer Does not exist"
+                    )
+                )
 
 

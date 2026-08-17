@@ -4,22 +4,37 @@ from fastapi import APIRouter,Depends,HTTPException,Response,status,Query
 
 from sqlalchemy.orm import Session
 from app.schemas.member import MemberResp,MemberCreate,UserStatus,MemberModify
+from app.schemas.common import StandardResponse,ErrorResponse
 from typing import List,Annotated
 from collections import defaultdict
 from datetime import date,timedelta
 
 router = APIRouter(prefix="/member" , tags=["members"])
 
-@router.get("/",response_model=List[MemberResp])
+@router.get("/",response_model=StandardResponse[List[MemberResp]])
 def get_members(db : Annotated[Session , Depends(get_db)] , limit : int = 10 , skip : int = 0) :
     members = db.query(Member).limit(limit).offset(skip).all()
-    return members
+    return StandardResponse(
+                                    success=True , 
+                                    data = members ,
+                                    message = "Members Obtained Successfully"
+                                )
 
-@router.post("/")
+@router.post("/",response_model=StandardResponse[MemberResp])
 def add_member(db : Annotated[Session , Depends(get_db)],response : Response , member : MemberCreate) :
     user_verify = db.query(User).filter(User.phone_number == member.phone_number).first()
     if user_verify : 
-        raise HTTPException(404,"User already exists")
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return StandardResponse(
+                                            success=False , 
+                                            data = None ,
+                                            message = "Member Creation Is Failed",
+                                            error = ErrorResponse(
+                                                code = "EXISTING MEMBER",
+                                                message="Member already exists"
+                                            )
+                                        )
+        
     new_user = User(email = member.email , phone_number = member.phone_number,full_name = member.full_name,status = member.status,
                     notes = member.notes , role_id = 1)
     db.add(new_user)
@@ -29,27 +44,48 @@ def add_member(db : Annotated[Session , Depends(get_db)],response : Response , m
     db.add(new_member)
     db.commit()
     response.status_code = status.HTTP_201_CREATED
-    return {"message" : "Member Created Successfully"}
+    return StandardResponse(
+                                        success=True , 
+                                        data = new_member ,
+                                        message = "Member Created Successfully"
+                                    )
+    
 
 
-@router.delete("/{id}")
-def delete_trainer(id : int , db : Annotated[Session , Depends(get_db)]) :
+@router.delete("/{id}" , response_model=StandardResponse[MemberResp])
+def delete_trainer(id : int,response : Response , db : Annotated[Session , Depends(get_db)]) :
     member_verify = db.query(Member).filter(Member.member_id==id)
     user_verify = db.query(User).filter(User.id == id)
     if member_verify.first() and user_verify.first() : 
         member_verify = member_verify.delete()
         user_verify = user_verify.delete()
         db.commit()
-        return {"message" : "Account deleted successfully"}
+        return StandardResponse(
+                                            success=True , 
+                                            data = None ,
+                                            message = "Member deleted Successfully"
+                                        )
+        
+    response.status_code = status.HTTP_404_NOT_FOUND
+    return StandardResponse(
+                                        success=False , 
+                                        data = None ,
+                                        message = "Member Searching is failed",
+                                        error=ErrorResponse(
+                                            code = "NON EXISTING MEMBER",
+                                            message="Member does not exist"
+                                        )
 
-    raise HTTPException(404,"the user does not exist")
+                                    )
+    
 
-@router.get("/search", response_model=MemberResp)
+@router.get("/search", response_model=StandardResponse[MemberResp])
 def get_member(
     db: Annotated[Session, Depends(get_db)],
+    response : Response,
     phone_num: int | None = None,
     full_name: str | None = None,
-    status : UserStatus | None = None
+    status_user : UserStatus | None = None
 ):
     if phone_num is not None:
         member = (
@@ -67,30 +103,49 @@ def get_member(
             )
             .first()
         )
-    elif status is not None :
+    elif status_user is not None :
         member = (
                     db.query(Member)
                     .filter(
-                        Member.user.has(User.status == status )
+                        Member.user.has(User.status == status_user )
                     )
                     .first()
                 )
     else:
-        raise HTTPException(
-            status_code=400,
-            detail="Provide phone_num or full_name or status"
-        )
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return StandardResponse(
+                                            success=False , 
+                                            data = None ,
+                                            message = "Member Searching is failed", 
+                                            error = ErrorResponse(
+                                                code = "MISSING ARGUMENTS",
+                                                message="Provide phone_number or full_name or status",
+                                                field="Status,Phone_num,Full_name"
+                                            )
+                                        )
+        
 
     if not member:
-        raise HTTPException(
-            status_code=404,
-            detail="Member not found"
-        )
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return StandardResponse(
+                                                    success=False , 
+                                                    data = None ,
+                                                    message = "Member Searching is failed", 
+                                                    error = ErrorResponse(
+                                                        code = "NON EXISTING MEMBER",
+                                                        message="Member does not exist"
+                                                        
+                                                    )
+                                                )
 
-    return member
+    return StandardResponse(
+                                                success=True , 
+                                                data = member ,
+                                                message = "Member obtained successfully"
+                                            )
 
-@router.patch("/{id}",response_model=MemberResp)
-def modify_member(id : int ,data : MemberModify , db : Annotated[Session , Depends(get_db)]) :
+@router.patch("/{id}",response_model=StandardResponse[MemberResp])
+def modify_member(id : int ,response : Response,data : MemberModify , db : Annotated[Session , Depends(get_db)]) :
     
     member_verify = db.query(Member).filter(Member.member_id == id).first()
     if member_verify :
@@ -104,5 +159,19 @@ def modify_member(id : int ,data : MemberModify , db : Annotated[Session , Depen
                 setattr(member_verify,field,value)
         db.commit()
         db.refresh(member_verify)
-        return member_verify
-    raise HTTPException(404,"Member Not Found")
+        response.status_code = status.HTTP_202_ACCEPTED
+        return StandardResponse(
+                                                    success=True , 
+                                                    data = member_verify ,
+                                                    message = "Member Modified Successfully"
+                                                )
+    response.status_code = status.HTTP_404_NOT_FOUND
+    return StandardResponse(
+                                                success=False , 
+                                                data = None ,
+                                                message = "Member Searching is failed", 
+                                                error = ErrorResponse(
+                                                    code = "NON EXISTING MEMBER",
+                                                    message="Member does not exist"
+                                                )
+                                            )
