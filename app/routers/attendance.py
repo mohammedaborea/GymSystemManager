@@ -14,6 +14,19 @@ router = APIRouter(prefix="/attendance" , tags=["attendances"],dependencies=[Dep
 
 @router.post("/", response_model=StandardResponse[AttendanceResp])
 def mark_attendance(attendance : AttendanceCreate,response : Response ,db : Annotated[Session , Depends(get_db)]) :
+    trainer_verify = db.query(Trainer).filter(Trainer.id == attendance.trainer_id).first()
+    if not trainer_verify : 
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return StandardResponse(
+                success=False,
+                data= None ,
+                message = "Attendance Creation is failed",
+                error= ErrorResponse(
+                    code = "NON EXISTING TRAINER",
+                    message="Trainer does not exist"
+                )
+            )
+    
     attendance_verify = db.query(MarkAttendance).filter(MarkAttendance.trainer_id == attendance.trainer_id, MarkAttendance.date_att == attendance.date_att).first()
     if not attendance_verify :
         new_att = MarkAttendance(trainer_id = attendance.trainer_id , attendance_id = attendance.attendance_id ,
