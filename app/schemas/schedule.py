@@ -27,7 +27,7 @@ class ScheduleCreate(BaseModel):
         return self
 
 class ScheduleResponse(BaseModel) :
-    
+    id : int
     date_schedule: date
     start_time : time
     end_time : time

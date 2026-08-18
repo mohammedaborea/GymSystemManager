@@ -9,12 +9,12 @@ from typing import List,Annotated
 from collections import defaultdict
 from datetime import date,timedelta
 from calendar import monthrange
-
-router = APIRouter(prefix="/schedule",tags=["schedules"])
+from app.oauth2 import get_current_user
+router = APIRouter(prefix="/schedule",tags=["schedules"],dependencies=[Depends(get_current_user)])
 
 @router.post("/" , response_model=StandardResponse[ScheduleResponse])
 def add_schedule(response : Response,db : Annotated[Session , Depends(get_db)],schedule : ScheduleCreate) :
-    trainer_verify = db.query(Trainer).filter(Trainer.user.has(User.id == schedule.trainer_id)).first()
+    trainer_verify = db.query(Trainer).filter(Trainer.id == schedule.trainer_id).first()
     if trainer_verify : 
         new_schedule = Schedule(trainer_id = schedule.trainer_id , date_schedule = schedule.date_schedule , zone = schedule.zone , 
                                 start_time = schedule.start_time , end_time = schedule.end_time , notes = schedule.notes)
@@ -41,7 +41,11 @@ def add_schedule(response : Response,db : Annotated[Session , Depends(get_db)],s
     )
 
 @router.get("/monthly",response_model=StandardResponse[dict[int,List[ScheduleResponse]]])
-def get_schedule_by_month(month : int,response : Response , year : int, db : Annotated[Session , Depends(get_db)]) : 
+def get_schedule_by_month(response : Response,db : Annotated[Session , Depends(get_db)],month : int | None = None , year : int | None = None) : 
+    if month is None :
+        month = date.today().month
+    if year is None :
+        year = date.today().year
 
     if not (1<=month<=12 and 2000<=year<=9999) :
         response.status_code = status.HTTP_400_BAD_REQUEST
@@ -121,8 +125,8 @@ def get_schedule_byweek(search: Annotated[WeeklyScheduleSearch, Query()],db : An
 
 
             
-@router.patch("/{id}" , response_model=StandardResponse[ScheduleCreate])
-def update_schedule(id : int,data : ScheduleUpdate ,db : Annotated[Session , Depends(get_db)]) :
+@router.patch("/{id}" , response_model=StandardResponse[ScheduleResponse])
+def update_schedule(id : int,response : Response,data : ScheduleUpdate ,db : Annotated[Session , Depends(get_db)]) :
     
     schedule_verify = db.query(Schedule).filter(Schedule.id == id).first()
     if schedule_verify :
@@ -136,10 +140,11 @@ def update_schedule(id : int,data : ScheduleUpdate ,db : Annotated[Session , Dep
                 data = schedule_verify , 
                 message = "Schedules updated successfully"
             )
+    response.status_code = status.HTTP_404_NOT_FOUND
     return StandardResponse(
             success=False , 
             data=None ,
-            message = "Schedule deleting is failed",
+            message = "Schedule updating is failed",
             error=ErrorResponse(
                 code = "NON_EXISTING_SCHEDULE",
                 message="Schedule does not exist"

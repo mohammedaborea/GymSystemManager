@@ -4,7 +4,7 @@ from .user import UserBase,UserResp,UserStatus
 
 class TrainerResp(BaseModel) :
     user : UserResp
-    user_id : int
+    id : int
     hire_date : date | None = None
     monthly_salary : int | None = None
     model_config = ConfigDict(from_attributes=True)

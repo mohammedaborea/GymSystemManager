@@ -8,8 +8,9 @@ from app.schemas.common import StandardResponse,ErrorResponse
 from typing import List,Annotated
 from collections import defaultdict
 from datetime import date,timedelta
+from app.oauth2 import get_current_user
 
-router = APIRouter(prefix="/attendance" , tags=["attendances"])
+router = APIRouter(prefix="/attendance" , tags=["attendances"],dependencies=[Depends(get_current_user)])
 
 @router.post("/", response_model=StandardResponse[AttendanceResp])
 def mark_attendance(attendance : AttendanceCreate,response : Response ,db : Annotated[Session , Depends(get_db)]) :
@@ -142,7 +143,7 @@ def modify_attendance(trainer_id : int,response : Response,db : Annotated[Sessio
 
 @router.get("/trainer/{id}" , response_model=StandardResponse[AttendanceResp])
 def get_trainer_recs(id : int,response : Response,db : Annotated[Session , Depends(get_db)],date_att : Annotated[date,Query()] = date.today()) :
-    trainer_verify = db.query(Trainer).filter(Trainer.user_id == id).first()
+    trainer_verify = db.query(Trainer).filter(Trainer.id == id).first()
     if trainer_verify :
         rec = db.query(MarkAttendance).filter(MarkAttendance.trainer_id == id , MarkAttendance.date_att == date_att).first()
         

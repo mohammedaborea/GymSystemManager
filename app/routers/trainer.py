@@ -8,9 +8,9 @@ from app.schemas.trainer import TrainerCreate , TrainerModify , TrainerResp
 from app.schemas.schedule import ScheduleResponse
 from app.schemas.user import UserStatus
 from typing import List,Annotated,DefaultDict
+from app.oauth2 import get_current_user
 
-
-router = APIRouter(prefix="/trainer",tags=["trainers"])
+router = APIRouter(prefix="/trainer",tags=["trainers"],dependencies=[Depends(get_current_user)])
 @router.get("/",response_model=StandardResponse[list[TrainerResp]])
 def get_trainers(db : Annotated[Session,Depends(get_db)] , limit : int = 10 , skip : int = 0) :
     trainers = db.query(Trainer).limit(limit).offset(skip).all()
@@ -145,10 +145,10 @@ def delete_trainer(id : int ,
                    response : Response ,
                    db : Annotated[Session , Depends(get_db)]) :
     trainer_verify = db.query(Trainer).filter(Trainer.id==id)
-    user_verify = db.query(User).filter(User.id == id)
-    if trainer_verify.first() and user_verify.first() : 
+    trainer_copy=trainer_verify.first()
+    if trainer_verify.first()  : 
         trainer_verify = trainer_verify.delete()
-        user_verify = user_verify.delete()
+        user_verify = db.query(User).filter(User.id == trainer_copy.user_id).delete(synchronize_session=False)
         db.commit()
         response.status_code = status.HTTP_200_OK
         return StandardResponse(success=True , 

@@ -8,8 +8,8 @@ from app.schemas.common import StandardResponse,ErrorResponse
 from typing import List,Annotated
 from collections import defaultdict
 from datetime import date,timedelta
-
-router = APIRouter(prefix="/membership" , tags=["memberships"])
+from app.oauth2 import get_current_user
+router = APIRouter(prefix="/membership" , tags=["memberships"],dependencies=[Depends(get_current_user)])
 
 @router.post("/" , response_model=StandardResponse[MembershipCreate])
 def add_membership(response : Response,db : Annotated[Session , Depends(get_db)] , membership : MembershipCreate) :

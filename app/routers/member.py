@@ -54,12 +54,14 @@ def add_member(db : Annotated[Session , Depends(get_db)],response : Response , m
 
 
 @router.delete("/{id}" , response_model=StandardResponse[MemberResp])
-def delete_trainer(id : int,response : Response , db : Annotated[Session , Depends(get_db)]) :
+def delete_member(id : int,response : Response , db : Annotated[Session , Depends(get_db)]) :
     member_verify = db.query(Member).filter(Member.id==id)
-    user_verify = db.query(User).filter(User.id == id)
-    if member_verify.first() and user_verify.first() : 
-        member_verify = member_verify.delete()
-        user_verify = user_verify.delete()
+    member_copy = member_verify.first()
+    
+    if member_copy : 
+        member_verify = member_verify.delete(synchronize_session=False)
+        
+        user_verify = db.query(User).filter(User.id == member_copy.member_id).delete(synchronize_session=False)
         db.commit()
         return StandardResponse(
                                             success=True , 

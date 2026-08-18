@@ -4,7 +4,7 @@ from .user import UserBase,UserResp,UserStatus
 
 class MemberResp(BaseModel) :
     user : UserResp
-    member_id : int
+    id : int
     joined_at : date | None = None
     expiry_date : date | None = None
     model_config = ConfigDict(from_attributes=True)
