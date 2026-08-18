@@ -10,11 +10,11 @@ from jwt.exceptions import InvalidTokenError
 import jwt
 from fastapi.security import OAuth2PasswordBearer , OAuth2PasswordRequestForm
 from pydantic import EmailStr
+from app.config import settings
 
-
-SECRET_KEY = "397cda3e6895ebd3cd0f97e8a3362e8cf55e50de6a6e1e6be48006769a6f1ad7"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 
 
